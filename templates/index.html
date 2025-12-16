@@ -4329,6 +4329,69 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     console.log('Browser initialization complete');
 
+    // Enhanced URL Parameter Support - Multiple formats
+    function checkAndLoadURLParameter() {
+        // Check for ?url= parameter first
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlParam = urlParams.get('url');
+        
+        if (urlParam) {
+            console.log('URL parameter detected:', urlParam);
+            loadPageFromParameter(urlParam);
+            return;
+        }
+        
+        // Check for path-based hash (e.g., /hash or /hash/page/path)
+        const path = window.location.pathname;
+        if (path && path !== '/' && path.length > 1) {
+            const pathWithoutSlash = path.substring(1); // Remove leading /
+            console.log('Path-based URL detected:', pathWithoutSlash);
+            
+            // Check if it starts with a valid hash (32 hex characters)
+            const hashMatch = pathWithoutSlash.match(/^([a-fA-F0-9]{32})(.*)?$/);
+            
+            if (hashMatch) {
+                const hash = hashMatch[1];
+                const pagePath = hashMatch[2]; // Could be empty, /page/about.mu, etc.
+                
+                let nomadnetUrl;
+                if (pagePath && pagePath.length > 0) {
+                    // Has a specific page path: /hash/page/about.mu
+                    nomadnetUrl = `${hash}:${pagePath}`;
+                } else {
+                    // Just hash: /hash → default to index.mu
+                    nomadnetUrl = `${hash}:/page/index.mu`;
+                }
+                
+                console.log('Constructed NomadNet URL:', nomadnetUrl);
+                loadPageFromParameter(nomadnetUrl);
+                return;
+            }
+        }
+    }
+
+    function loadPageFromParameter(nomadnetUrl) {
+        // Wait for the first tab to be created and ready
+        setTimeout(() => {
+            const tab = getActiveTab();
+            if (tab) {
+                const addressBar = document.querySelector(`#${tab.id} .address-bar`);
+                if (addressBar) {
+                    addressBar.value = nomadnetUrl;
+                    
+                    // Navigate to the URL
+                    navigateToUrlInternalTab(nomadnetUrl, true);
+                    
+                    // Clean the URL bar (remove parameters/path) without page reload
+                    window.history.replaceState({}, document.title, window.location.origin);
+                }
+            }
+        }, 500);
+    }
+
+    // Call the function after initialization
+    checkAndLoadURLParameter();
+
     // Orientation alert for mobile devices - auto-hide after 5 seconds
     if (window.matchMedia('(hover: none) and (pointer: coarse)').matches || isMobileDevice()) {
         let alertTimeout = null;

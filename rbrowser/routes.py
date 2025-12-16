@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 import json
 import RNS
-from flask import jsonify, render_template, request, send_file, send_from_directory , Response, stream_with_context
+from flask import jsonify, render_template, request, send_file, send_from_directory , Response, stream_with_context, abort
 import time
 import uuid
 import threading
@@ -538,6 +538,20 @@ def register_routes(app, browser) -> None:
         except Exception as e:
             return jsonify({'status': 'error', 'error': str(e)})
 
+    @app.route('/<path:path>')
+    def catch_all(path):
+        """
+        Catch-all route for hash-based URLs.
+        Allows URLs like /hash or /hash/page/path.mu to load the main interface.
+        The JavaScript will then parse the path and load the correct page.
+        """
+        # Check if path starts with a 32-character hex hash
+        if re.match(r'^[a-fA-F0-9]{32}', path):
+            # Serve the main index.html for hash-based URLs
+            return render_template('index.html')
+        
+        # For other paths, return 404
+        abort(404)
 
 # ---------------------------------------------------------------------- #
 # Helper utilities (kept module-private)                                 #
