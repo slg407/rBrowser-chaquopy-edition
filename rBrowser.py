@@ -22,7 +22,6 @@ from flask import Flask
 from rbrowser.routes import register_routes
 from rbrowser.web_browser import NomadNetWebBrowser
 
-
 # Ensure UTF-8 output for Windows console
 if sys.platform == "win32":
     try:
@@ -44,7 +43,7 @@ def create_app() -> Tuple[Flask, NomadNetWebBrowser]:
 app, browser = create_app()
 
 
-def start_server(flask_app: Flask, host: str = "0.0.0.0", port: int = 5000) -> None:
+def start_server(flask_app: Flask, host: str = "127.0.0.1", port: int = 5000) -> None:
     """Start the HTTP server, preferring Waitress when available."""
     try:
         from waitress import serve
@@ -61,7 +60,7 @@ def start_server(flask_app: Flask, host: str = "0.0.0.0", port: int = 5000) -> N
 def main() -> int:
     """CLI entrypoint with sanity checks before serving traffic."""
     parser = argparse.ArgumentParser(description="rBrowser - Standalone NomadNet Browser")
-    parser.add_argument("--host", type=str, default="0.0.0.0", help="Host to bind the web server to (default: 0.0.0.0)")
+    parser.add_argument("--host", type=str, default="127.0.0.1", help="Host to bind the web server to (default: 127.0.0.1)")
     parser.add_argument("--port", type=int, default=5000, help="Port to run the web server on (default: 5000)")
     args = parser.parse_args()
 
@@ -97,7 +96,7 @@ def main() -> int:
 
         browser.start_monitoring()
 
-        host_display = "localhost" if args.host == "0.0.0.0" else args.host
+        host_display = "localhost" if args.host == "127.0.0.1" else args.host
         print(f"🌐 Starting local web server on http://{host_display}:{args.port}")
         print("📡 Listening for NomadNetwork announces...")
         print(f"🔍 Open your browser to http://{host_display}:{args.port}")

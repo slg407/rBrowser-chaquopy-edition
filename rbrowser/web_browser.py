@@ -13,7 +13,7 @@ import threading
 import time
 from datetime import datetime
 from typing import Any, Dict, Optional
-
+from os.path import join
 import RNS
 import RNS.vendor.umsgpack as msgpack
 
@@ -83,7 +83,7 @@ class NomadNetWebBrowser:
 
             self.reticulum = self._ensure_reticulum_instance()
 
-            identity_path = "nomadnet_browser_identity"
+            identity_path = join(os.environ["HOME"], "nomadnet_browser_identity")
             if os.path.exists(identity_path):
                 self.identity = RNS.Identity.from_file(identity_path)
             else:

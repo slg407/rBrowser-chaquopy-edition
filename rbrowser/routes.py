@@ -102,50 +102,50 @@ def register_routes(app, browser) -> None:
         file_path = request.args.get("path", "/file/")
         if not file_path.startswith("/file/"):
             return jsonify({"error": "Invalid file path"}), 400
-        
+
         # Generate unique download ID
         download_id = str(uuid.uuid4())
-        
+
         # Return download ID to client immediately
         return jsonify({"download_id": download_id, "status": "started"})
-        
+
     @app.route("/api/download/<node_hash>/stream")
     def api_download_file_stream(node_hash):
         """Stream file download with Server-Sent Events for progress."""
         file_path = request.args.get("path", "/file/")
         download_id = request.args.get("download_id")
-        
+
         if not file_path.startswith("/file/"):
             return jsonify({"error": "Invalid file path"}), 400
-        
+
         def generate():
             # Track progress
             download_progress[download_id] = {"progress": 0, "status": "downloading"}
-            
+
             def progress_callback(progress):
                 download_progress[download_id]["progress"] = progress * 100
                 # Send progress update via SSE
                 yield f"data: {json.dumps({'progress': progress * 100, 'status': 'downloading'})}\n\n"
-            
+
             # Download file with progress tracking
             response = browser.fetch_file(node_hash, file_path, progress_callback)
-            
+
             if response["status"] == "error":
                 yield f"data: {json.dumps({'error': response.get('error'), 'status': 'error'})}\n\n"
                 return
-            
+
             file_data = response["content"]
             filename = file_path.split("/")[-1] or "download"
-            
+
             # Send completion with file data
             import base64
             file_b64 = base64.b64encode(file_data).decode('utf-8')
             yield f"data: {json.dumps({'progress': 100, 'status': 'complete', 'filename': filename, 'file_data': file_b64})}\n\n"
-            
+
             # Cleanup
             if download_id in download_progress:
                 del download_progress[download_id]
-        
+
         return Response(generate(), mimetype='text/event-stream')
 
     @app.route("/api/download/<node_hash>/start")
@@ -154,13 +154,13 @@ def register_routes(app, browser) -> None:
         file_path = request.args.get("path", "/file/")
         if not file_path.startswith("/file/"):
             return jsonify({"error": "Invalid file path"}), 400
-        
+
         # Generate unique download ID
         download_id = str(uuid.uuid4())
         download_progress[download_id] = {"progress": 0, "status": "starting"}
-        
+
         # Removed the print statement here - it's now in nomadnet.py
-        
+
         def do_download():
             def progress_callback(progress):
                 download_progress[download_id] = {
@@ -168,9 +168,9 @@ def register_routes(app, browser) -> None:
                     "status": "downloading"
                 }
                 # Removed: print statement here
-            
+
             response = browser.fetch_file(node_hash, file_path, progress_callback)
-            
+
             if response["status"] == "success":
                 download_results[download_id] = {
                     "status": "complete",
@@ -184,12 +184,12 @@ def register_routes(app, browser) -> None:
                     "error": response.get("error", "Unknown error")
                 }
                 download_progress[download_id] = {"progress": 0, "status": "error"}
-        
+
         # Start download in background thread
         thread = threading.Thread(target=do_download)
         thread.daemon = True
         thread.start()
-        
+
         return jsonify({"download_id": download_id, "status": "started"})
 
     @app.route("/api/download/progress/<download_id>")
@@ -202,34 +202,34 @@ def register_routes(app, browser) -> None:
     def api_download_result(download_id):
         """Get the downloaded file once complete."""
         result = download_results.get(download_id)
-        
+
         if not result:
             return jsonify({"error": "Download not found"}), 404
-        
+
         if result["status"] == "error":
             return jsonify({"error": result.get("error", "Download failed")}), 500
-        
+
         file_data = result["content"]
         filename = result["filename"]
-        
+
         # Cleanup
         if download_id in download_progress:
             del download_progress[download_id]
         if download_id in download_results:
             del download_results[download_id]
-        
+
         if not isinstance(file_data, bytes):
             if isinstance(file_data, str):
                 file_data = file_data.encode("latin1")
             else:
                 file_data = str(file_data).encode("latin1")
-        
+
         mime_type, _ = mimetypes.guess_type(filename)
         if not mime_type:
             mime_type = "application/octet-stream"
-        
+
         print(f"✅ Serving file: {filename} ({len(file_data)} bytes)")
-        
+
         file_obj = io.BytesIO(file_data)
         return send_file(
             file_obj,
@@ -312,16 +312,16 @@ def register_routes(app, browser) -> None:
     def api_search_cache():
         query = request.args.get("q", "").strip()
         mode = request.args.get("mode", "partial")  # Default to partial matching
-        
+
         if not query:
             return jsonify([])
-        
+
         # Keep original case for exact matching, but use lowercase for partial
         query_lower = query.lower()
-        
+
         results: List[Dict[str, Any]] = []
         search_limit = int(browser.cache_settings.get("search_limit", 50))
-        
+
         try:
             for node_dir in _iter_cache_dirs(browser.cache_dir):
                 node_result = _search_node_cache(node_dir, query, search_limit, results, mode)
@@ -399,7 +399,7 @@ def register_routes(app, browser) -> None:
     @app.route("/templates/fingerprint.png")
     def serve_fingerprint_icon():
         return _serve_template_asset("fingerprint.png")
-    
+
     @app.route('/templates/<path:filename>')
     def serve_template_file(filename):
         """Serve static files from templates directory (icons, images, etc.)"""
@@ -508,11 +508,11 @@ def register_routes(app, browser) -> None:
         else:
             print(f"API Response: Ping failed - {response.get('error', 'Unknown error')}")
         return jsonify(response)
-    
+
     @app.route('/api/favorites', methods=['GET'])
     def get_favorites():
         try:
-            favorites_file = 'settings/favorites.json'
+            favorites_file = (os.environ["HOME"], 'settings/favorites.json')
             if os.path.exists(favorites_file):
                 with open(favorites_file, 'r') as f:
                     favorites = json.load(f)
@@ -526,14 +526,14 @@ def register_routes(app, browser) -> None:
     def save_favorites():
         try:
             favorites = request.json.get('favorites', [])
-            favorites_file = 'settings/favorites.json'
-            
+            favorites_file = (os.environ["HOME"], 'settings/favorites.json')
+
             # Create settings directory if it doesn't exist
-            os.makedirs('settings', exist_ok=True)
-            
+            os.makedirs(os.environ["HOME"] / 'settings', exist_ok=True)
+
             with open(favorites_file, 'w') as f:
                 json.dump(favorites, f, indent=2)
-            
+
             return jsonify({'status': 'success', 'message': 'Favorites saved'})
         except Exception as e:
             return jsonify({'status': 'error', 'error': str(e)})
@@ -549,7 +549,7 @@ def register_routes(app, browser) -> None:
         if re.match(r'^[a-fA-F0-9]{32}', path):
             # Serve the main index.html for hash-based URLs
             return render_template('index.html')
-        
+
         # For other paths, return 404
         abort(404)
 

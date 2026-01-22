@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import threading
 import time
+import os
+from os.path import join
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
@@ -78,7 +80,7 @@ class NomadNetBrowser:
         self.link: Optional[RNS.Link] = None
         self.result = RequestResult()
         self.response_event = threading.Event()
-        self.page_path: str = "/page/index.mu"
+        self.page_path: str = join(os.environ["HOME"], "/page/index.mu")
         self.form_data: Optional[Dict[str, Any]] = None
         self.ping_start_time: Optional[float] = None
 
@@ -88,7 +90,7 @@ class NomadNetBrowser:
 
     def fetch_page(
         self,
-        page_path: str = "/page/index.mu",
+        page_path: str = join(os.environ["HOME"],"page/index.mu"),
         form_data: Optional[Dict[str, Any]] = None,
         timeout: float = 30,
     ) -> Dict[str, Any]:
@@ -362,7 +364,7 @@ class NomadNetFileBrowser:
         self.link: Optional[RNS.Link] = None
         self.result = RequestResult()
         self.response_event = threading.Event()
-        self.file_path: str = ""
+        self.file_path: str = os.environ["HOME"]
 
     def fetch_file(self, file_path: str, timeout: float = 60, progress_callback=None) -> Dict[str, Any]:
         """Fetch a binary file from the remote node with optional progress tracking."""
@@ -410,14 +412,14 @@ class NomadNetFileBrowser:
             # Extract filename from path for cleaner logging
             filename = self.file_path.split('/')[-1] or "file"
             print(f"📁 Download of {filename} started")
-            
+
             # Define progress handler
             def on_progress(receipt):
                 if self.progress_callback:
                     progress = receipt.progress  # 0.0 to 1.0
                     self.progress_callback(progress)
                     # Removed: print statement here
-            
+
             link.request(
                 self.file_path,
                 data=None,
@@ -433,7 +435,7 @@ class NomadNetFileBrowser:
     def _on_response(self, receipt: RNS.RequestReceipt) -> None:
         try:
             data = receipt.response
-            
+
             if isinstance(data, bytes):
                 self.result.data = data
                 filename = self.file_path.split('/')[-1] or "file"

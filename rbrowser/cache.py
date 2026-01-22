@@ -11,6 +11,8 @@ from __future__ import annotations
 import json
 import queue
 import threading
+import os
+from os.path import join
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Iterable, Optional, Tuple
@@ -49,7 +51,7 @@ class CacheManager:
         "/page/archive.mu",
     ]
 
-    def __init__(self, browser: "NomadNetWebBrowser", cache_root: str = "cache/nodes") -> None:
+    def __init__(self, browser: "NomadNetWebBrowser", cache_root: str = join(os.environ["HOME"], "cache/nodes")) -> None:
         self.browser = browser
         self.cache_dir = Path(cache_root)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -123,7 +125,7 @@ class CacheManager:
         else:
             print(f"📁 {node_name} already cached, skipping...")
 
-    def enqueue_cache(self, node_hash: str, node_name: str, page_path: str = "/page/index.mu") -> None:
+    def enqueue_cache(self, node_hash: str, node_name: str, page_path: str = join(os.environ["HOME"], "/page/index.mu")) -> None:
         """Queue a node for caching regardless of current state."""
         self.cache_queue.put((node_hash, node_name, page_path))
 
@@ -133,7 +135,7 @@ class CacheManager:
 
     def save_settings(self) -> None:
         """Persist cache settings to disk."""
-        settings_dir = Path("settings")
+        settings_dir = Path(os.environ["HOME"],  "settings")
         settings_dir.mkdir(exist_ok=True)
         settings_file = settings_dir / "cache_settings.json"
 
@@ -315,7 +317,7 @@ class CacheManager:
 
             if (
                 self.settings.get("cache_additional", False)
-                and page_path == "/page/index.mu"
+                and page_path == join(os.environ["HOME"], "page/index.mu")
             ):
                 print(f"📑 Triggering additional page caching for {node_name}")
                 self.enqueue_additional(node_hash, node_name)
@@ -345,7 +347,7 @@ class CacheManager:
             print(f"✅ Successfully cached page from {safe_name} (with character replacements)")
 
     def _load_settings(self) -> None:
-        settings_dir = Path("settings")
+        settings_dir = Path(os.environ["HOME"], "settings")
         settings_dir.mkdir(exist_ok=True)
         settings_file = settings_dir / "cache_settings.json"
 
